@@ -63,6 +63,18 @@ end
 Num2Cu
 Num2Ing
 
+count_of_cuisines = Dict()
+for i = 1:length(Cuisines)
+    count_of_cuisines[Cuisines[i]] = 0
+end
+for recipe in cooking
+    count_of_cuisines[recipe["cuisine"]] += 1
+end
+println("Count of cuisines:")   
+count_of_cuisines
+for i = 1:length(Cuisines)
+    println("Cuisine $(Cuisines[i]) has $(count_of_cuisines[Cuisines[i]]) recipes")
+end
 
 incidence_form = elist2incidence(EdgeList, length(Ingredients))
 
@@ -92,7 +104,6 @@ for i = 1:l
     y[i, EdgeColors[i]] = 1
 end 
 B = sparse(bipartite_graph)                 # (l+u) × (l+u) adjacency
-
 # row-normalise B  →  transition matrix P 
 rowsums = vec(sum(B, dims = 2))
 invrows  = 1.0 ./ rowsums
@@ -133,28 +144,45 @@ for i = 1:(l + u)
 end
 
 # find nodes with similar labels and get their names from Num2Cu and Num2Ing
+# sort outputs by similarity
+
+
 sig = 1
-for i = 1:100
-    for j = 1:100
+
+# change this for loop to adjust which nodes to compare
+results = Vector{Tuple{Int, Int, Float64}}()
+for i in (l + 1):(l + u)
+    for j in (l + 1):(l + u)
         similarity = exp(norm(x[i, :] - x[j, :]))^2 / (2 * sig)
-        if similarity > 4.5
-            println("Node $i and Node $j are similar with similarity $similarity")
-            if i <= l
-                println("Node $i is a recipe with cuisine $(Num2Cu[highest[i]])")
-                for k = 1:length(EdgeList[i])
-                    println("Node $i is connected to ingredient $(Num2Ing[EdgeList[i][k]])")
-                end
-            else
-                println("Node $i is an ingredient $(Num2Ing[i - l]) is an ingredient with cuisine $(Num2Cu[highest[i]])")
-            end
-            if j <= l
-                println("Node $j is a recipe with cuisine $(Num2Cu[highest[j]])")
-                for k = 1:length(EdgeList[j])
-                    println("Node $j is connected to ingredient $(Num2Ing[EdgeList[j][k]])")
-                end
-            else
-                println("Node $j is an ingredient $(Num2Ing[j - l]) is an ingredient with cuisine $(Num2Cu[highest[j]])")
-            end
-        end
+        push!(results, (i, j, similarity))
     end
 end
+
+sorted_results = sort(results, by = r -> r[3], rev = true)
+print("Top 10 similar nodes:")
+for (i, j, similarity) in sorted_results[1:10]
+    println("Node $i and Node $j are similar with similarity $similarity")
+    
+    if i <= l
+        println("Node $i is a recipe with cuisine $(Num2Cu[highest[i]])")
+        for k in 1:length(EdgeList[i])
+            println("Node $i is connected to ingredient $(Num2Ing[EdgeList[i][k]])")
+        end
+    else
+        println("Node $i is an ingredient $(Num2Ing[i - l]) with cuisine $(Num2Cu[highest[i]])")
+    end
+    
+    if j <= l
+        println("Node $j is a recipe with cuisine $(Num2Cu[highest[j]])")
+        for k in 1:length(EdgeList[j])
+            println("Node $j is connected to ingredient $(Num2Ing[EdgeList[j][k]])")
+        end
+    else
+        println("Node $j is an ingredient $(Num2Ing[j - l]) with cuisine $(Num2Cu[highest[j]])")
+    end
+    println("")
+end
+
+
+
+
